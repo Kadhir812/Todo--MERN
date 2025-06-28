@@ -35,11 +35,28 @@ export default [
       ],
     },
   },
+  js.config({
+    languageOptions: {
+      globals: {
+        // Jest globals
+        test: true,
+        expect: true,
+        describe: true,
+        beforeAll: true,
+        afterAll: true,
+        beforeEach: true,
+        afterEach: true,
+        // Browser globals
+        window: true,
+        document: true,
+      },
+    },
+  }),
   {
-    env: {
-      browser: true,
-      es2021: true,
-      jest: true,
+    files: ['**/*.jsx', '**/*.js'],
+    plugins: { react },
+    rules: {
+      // your rules here
     },
   },
 ]
