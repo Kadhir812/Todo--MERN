@@ -47,15 +47,12 @@ jobs:
         working-directory: ./Backend
         run: |
           if npm run | grep -q "test"; then
-            npx jest --ci --coverage
+            npm test -- --ci --coverage
           else
             echo "No test script found. Running syntax check instead."
             node -c server.js
           fi
-
-      - name: Fix Jest permissions
-        working-directory: ./Backend
-        run: chmod +x ./node_modules/.bin/jest
+        
 
       # --- Frontend ---
       - name: Install Frontend Dependencies
