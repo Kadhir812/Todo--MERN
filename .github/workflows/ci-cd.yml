@@ -232,7 +232,7 @@ jobs:
     strategy:
       matrix:
         service: [backend, frontend]
-        tag: [latest, develop]
+        tag: [latest, latest]
 
     steps:
       - name: Run Trivy vulnerability scanner
