@@ -5,15 +5,18 @@ const { app, setDb } = require('../server');
 let connection;
 let db;
 
+const mongoUri = process.env.MONGO_URI || 'mongodb://localhost:27017';
+const dbName = process.env.MONGO_DBNAME || 'todo_app_test';
+
 beforeAll(async () => {
-  // Connect to local MongoDB test database
-  connection = await MongoClient.connect('mongodb://localhost:27017', {
+  // Connect to MongoDB test database (works in CI and locally)
+  connection = await MongoClient.connect(mongoUri, {
     useUnifiedTopology: true,
   });
-  db = connection.db('todo_app_test');
+  db = connection.db(dbName);
   setDb(db);
 
-  // Optionally, clear the todos collection before tests
+  // Clear the todos collection before tests
   await db.collection('todos').deleteMany({});
 });
 
