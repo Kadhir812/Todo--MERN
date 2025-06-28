@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import PropTypes from "prop-types";
 
@@ -186,6 +186,7 @@ function TodoList({ todos, updateTodo, deleteTodo, isDarkMode }) {
     </div>
   );
 }
+
 
 TodoList.propTypes = {
   todos: PropTypes.array.isRequired,
