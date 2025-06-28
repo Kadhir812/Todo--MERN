@@ -5,6 +5,8 @@ import App from '../src/App';
 // eslint-disable-next-line no-unused-vars
 import React from 'react';
 
+
+
 // 1. Renders the Navbar with "Todo List" title
 test('renders Navbar with Todo List title', () => {
   render(<App />);
