@@ -2,6 +2,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import App from '../src/App';
+import React from 'react';
 
 // 1. Renders the Navbar with "Todo List" title
 test('renders Navbar with Todo List title', () => {
