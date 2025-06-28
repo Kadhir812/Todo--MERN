@@ -2,9 +2,9 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ master, develop ]
   pull_request:
-    branches: [ main ]
+    branches: [ master ]
 
 env:
   REGISTRY: docker.io
@@ -15,211 +15,217 @@ jobs:
   test:
     runs-on: ubuntu-latest
     name: Test Applications
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-        cache: 'npm'
-        cache-dependency-path: |
-          Backend/package-lock.json
-          Frontend/package-lock.json
-    
-    # Test Backend
-    - name: Install Backend Dependencies
-      working-directory: ./Backend
-      run: npm ci
-      
-    - name: Run Backend Linting
-      working-directory: ./Backend
-      run: |
-        # Add basic linting if no test script exists
-        npx eslint . --ext .js --ignore-pattern node_modules/ || echo "No ESLint config found, skipping lint"
-      continue-on-error: true
-      
-    - name: Run Backend Tests
-      working-directory: ./Backend
-      run: |
-        # If no tests exist, create a basic health check
-        if npm test 2>&1 | grep -q "no test specified"; then
-          echo "No tests specified, running basic syntax check"
-          node -c server.js
-        else
-          npm test
-        fi
-    
-    # Test Frontend
-    - name: Install Frontend Dependencies
-      working-directory: ./Frontend
-      run: npm ci
-      
-    - name: Run Frontend Linting
-      working-directory: ./Frontend
-      run: npm run lint
-      
-    - name: Build Frontend
-      working-directory: ./Frontend
-      run: npm run build
-      
-    - name: Run Frontend Tests
-      working-directory: ./Frontend
-      run: |
-        # If no tests exist, just verify build succeeded
-        if npm test 2>&1 | grep -q "no test specified"; then
-          echo "No tests specified, build verification passed"
-        else
-          npm test
-        fi
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: |
+            Backend/package-lock.json
+            Frontend/package-lock.json
+
+      # --- Backend ---
+      - name: Install Backend Dependencies
+        working-directory: ./Backend
+        run: npm ci
+
+      - name: Run Backend Linting
+        working-directory: ./Backend
+        run: |
+          if npx eslint -v >/dev/null 2>&1; then
+            npx eslint . --ext .js --ignore-pattern node_modules/
+          else
+            echo "No ESLint config found. Skipping lint."
+          fi
+
+      - name: Run Backend Tests
+        working-directory: ./Backend
+        run: |
+          if npm run | grep -q "test"; then
+            npm test
+          else
+            echo "No test script found. Running syntax check instead."
+            node -c server.js
+          fi
+
+      # --- Frontend ---
+      - name: Install Frontend Dependencies
+        working-directory: ./Frontend
+        run: npm ci
+
+      - name: Run Frontend Linting
+        working-directory: ./Frontend
+        run: |
+          if npm run | grep -q "lint"; then
+            npm run lint
+          else
+            echo "No lint script found. Skipping lint."
+          fi
+
+      - name: Build Frontend
+        working-directory: ./Frontend
+        run: npm run build
+
+      - name: Run Frontend Tests
+        working-directory: ./Frontend
+        run: |
+          if npm run | grep -q "test"; then
+            npm test
+          else
+            echo "No test script found. Build verification passed."
+          fi
 
   build-and-push:
     needs: test
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
-    
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop')
+
     strategy:
       matrix:
         service: [backend, frontend]
-        
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
-      
-    - name: Log in to Docker Hub
-      uses: docker/login-action@v3
-      with:
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_PASSWORD }}
-        
-    - name: Extract metadata
-      id: meta
-      uses: docker/metadata-action@v5
-      with:
-        images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.service == 'backend' && env.BACKEND_IMAGE_NAME || env.FRONTEND_IMAGE_NAME }}
-        tags: |
-          type=ref,event=branch
-          type=ref,event=pr
-          type=sha,prefix={{branch}}-
-          type=raw,value=latest,enable={{is_default_branch}}
-            - name: Build and push Docker image
-      uses: docker/build-push-action@v5
-      with:
-        context: ./${{ matrix.service == 'backend' && 'Backend' || 'Frontend' }}
-        file: ./${{ matrix.service == 'backend' && 'Backend/Dockerfile' || 'Frontend/Dockerfile.prod' }}
-        push: true
-        tags: ${{ steps.meta.outputs.tags }}
-        labels: ${{ steps.meta.outputs.labels }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
-        platforms: linux/amd64,linux/arm64
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.service == 'backend' && env.BACKEND_IMAGE_NAME || env.FRONTEND_IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./${{ matrix.service == 'backend' && 'Backend' || 'Frontend' }}
+          file: ./${{ matrix.service == 'backend' && 'Backend/Dockerfile' || 'Frontend/Dockerfile.prod' }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64,linux/arm64
 
   deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    
+    if: github.ref == 'refs/heads/master'
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Create docker-compose for deployment
-      run: |
-        cat > docker-compose.prod.yml << EOF
-        version: '3.8'
-        
-        services:
-          mongodb:
-            image: mongo:7.0
-            container_name: todo-mongodb
-            restart: unless-stopped
-            ports:
-              - "27017:27017"
-            volumes:
-              - mongodb_data:/data/db
-            environment:
-              MONGO_INITDB_ROOT_USERNAME: \${MONGO_ROOT_USERNAME:-admin}
-              MONGO_INITDB_ROOT_PASSWORD: \${MONGO_ROOT_PASSWORD:-password}
-            networks:
-              - todo-network
-          backend:
-            image: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.BACKEND_IMAGE_NAME }}:latest
-            container_name: todo-backend
-            restart: unless-stopped
-            ports:
-              - "5000:5000"
-            depends_on:
-              - mongodb
-            environment:
-              NODE_ENV: production
-              MONGODB_URI: mongodb://mongodb:27017
-            networks:
-              - todo-network
-          frontend:
-            image: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.FRONTEND_IMAGE_NAME }}:latest
-            container_name: todo-frontend
-            restart: unless-stopped
-            ports:
-              - "80:5173"
-            depends_on:
-              - backend
-            environment:
-              VITE_API_URL: http://localhost:5000
-            networks:
-              - todo-network
-        
-        volumes:
-          mongodb_data:
-        
-        networks:
-          todo-network:
-            driver: bridge
-        EOF
-        
-    - name: Deploy to production server
-      if: github.ref == 'refs/heads/main'
-      run: |
-        echo "Deployment configuration created"
-        echo "To deploy to your server, copy docker-compose.prod.yml and run:"
-        echo "docker-compose -f docker-compose.prod.yml up -d"
-        
-    # Uncomment and configure the following step if you have a remote server
-    # - name: Deploy to remote server
-    #   uses: appleboy/ssh-action@v1.0.0
-    #   with:
-    #     host: ${{ secrets.HOST }}
-    #     username: ${{ secrets.USERNAME }}
-    #     key: ${{ secrets.SSH_KEY }}
-    #     script: |
-    #       cd /path/to/your/app
-    #       docker-compose -f docker-compose.prod.yml pull
-    #       docker-compose -f docker-compose.prod.yml up -d
-    #       docker system prune -f
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create docker-compose for deployment
+        run: |
+          cat > docker-compose.prod.yml << EOF
+          version: '3.8'
+
+          services:
+            mongodb:
+              image: mongo:7.0
+              container_name: todo-mongodb
+              restart: unless-stopped
+              ports:
+                - "27017:27017"
+              volumes:
+                - mongodb_data:/data/db
+              environment:
+                MONGO_INITDB_ROOT_USERNAME: \${MONGO_ROOT_USERNAME:-admin}
+                MONGO_INITDB_ROOT_PASSWORD: \${MONGO_ROOT_PASSWORD:-password}
+              networks:
+                - todo-network
+
+            backend:
+              image: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.BACKEND_IMAGE_NAME }}:latest
+              container_name: todo-backend
+              restart: unless-stopped
+              ports:
+                - "5000:5000"
+              depends_on:
+                - mongodb
+              environment:
+                NODE_ENV: production
+                MONGODB_URI: mongodb://mongodb:27017
+              networks:
+                - todo-network
+
+            frontend:
+              image: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.FRONTEND_IMAGE_NAME }}:latest
+              container_name: todo-frontend
+              restart: unless-stopped
+              ports:
+                - "80:80"
+              depends_on:
+                - backend
+              environment:
+                VITE_API_URL: http://localhost:5000
+              networks:
+                - todo-network
+
+          volumes:
+            mongodb_data:
+
+          networks:
+            todo-network:
+              driver: bridge
+          EOF
+
+      - name: Deploy to production server
+        run: |
+          echo "Docker Compose file generated."
+          echo "To deploy, copy docker-compose.prod.yml to your server and run:"
+          echo "docker-compose -f docker-compose.prod.yml up -d"
+
+      # --- Optional: Enable for real SSH deployment ---
+      # - name: Deploy to remote server
+      #   uses: appleboy/ssh-action@v1.0.0
+      #   with:
+      #     host: ${{ secrets.HOST }}
+      #     username: ${{ secrets.USERNAME }}
+      #     key: ${{ secrets.SSH_KEY }}
+      #     script: |
+      #       cd /path/to/app
+      #       docker-compose -f docker-compose.prod.yml pull
+      #       docker-compose -f docker-compose.prod.yml up -d
+      #       docker system prune -f
 
   security-scan:
-    runs-on: ubuntu-latest
     needs: build-and-push
+    runs-on: ubuntu-latest
     if: github.event_name == 'push'
-    
+
     strategy:
       matrix:
         service: [backend, frontend]
-        
+
     steps:
-    - name: Run Trivy vulnerability scanner
-      uses: aquasecurity/trivy-action@master
-      with:
-        image-ref: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.service == 'backend' && env.BACKEND_IMAGE_NAME || env.FRONTEND_IMAGE_NAME }}:latest
-        format: 'sarif'
-        output: 'trivy-results-${{ matrix.service }}.sarif'
-        
-    - name: Upload Trivy scan results to GitHub Security tab
-      uses: github/codeql-action/upload-sarif@v3
-      if: always()
-      with:
-        sarif_file: 'trivy-results-${{ matrix.service }}.sarif'
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@0.20.0  # ✅ pinned version
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.service == 'backend' && env.BACKEND_IMAGE_NAME || env.FRONTEND_IMAGE_NAME }}:latest
+          format: 'sarif'
+          output: 'trivy-results-${{ matrix.service }}.sarif'
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results-${{ matrix.service }}.sarif'
