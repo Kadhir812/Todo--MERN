@@ -51,4 +51,13 @@ export default [
       'no-unused-vars': 'off',
     },
   },
+  {
+    files: ['**/*.{js,jsx}'],
+    rules: {
+      'no-unused-vars': [
+        'error',
+        { varsIgnorePattern: '^React$' }
+      ],
+    },
+  },
 ]
