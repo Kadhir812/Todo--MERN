@@ -47,7 +47,7 @@ jobs:
         working-directory: ./Backend
         run: |
           if npm run | grep -q "test"; then
-            npm test
+            npx jest --ci --coverage
           else
             echo "No test script found. Running syntax check instead."
             node -c server.js
