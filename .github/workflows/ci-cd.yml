@@ -232,14 +232,15 @@ jobs:
     strategy:
       matrix:
         service: [backend, frontend]
+        tag: [latest, develop]
 
     steps:
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@0.20.0  # ✅ pinned version
+        uses: aquasecurity/trivy-action@0.20.0
         with:
-          image-ref: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.service == 'backend' && env.BACKEND_IMAGE_NAME || env.FRONTEND_IMAGE_NAME }}:latest
+          image-ref: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.service == 'backend' && env.BACKEND_IMAGE_NAME || env.FRONTEND_IMAGE_NAME }}:${{ matrix.tag }}
           format: 'sarif'
-          output: 'trivy-results-${{ matrix.service }}.sarif'
+          output: 'trivy-results-${{ matrix.service }}-${{ matrix.tag }}.sarif'
 
       - name: Upload Trivy scan results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3
