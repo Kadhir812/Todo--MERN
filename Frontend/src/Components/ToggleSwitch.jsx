@@ -1,4 +1,5 @@
 // src/components/ToggleSwitch.jsx
+import React from 'react'; // eslint-disable-line no-unused-vars
 import  { useState } from 'react';
 import { motion } from 'framer-motion';
 import PropTypes from 'prop-types';
