@@ -1,5 +1,17 @@
 const request = require('supertest');
-const app = require('./server');
+const { app, setDb } = require('../server');
+
+beforeAll(() => {
+  // Mock the db and collection methods
+  setDb({
+    collection: () => ({
+      find: () => ({
+        toArray: async () => ([]), // return empty array for GET /todos
+      }),
+      insertOne: async () => ({ insertedId: 'mockid' }),
+    }),
+  });
+});
 
 describe('Todo API', () => {
   it('should return 400 when creating a todo with missing fields', async () => {

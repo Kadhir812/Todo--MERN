@@ -14,6 +14,10 @@ const mongoUri = 'mongodb://mongod:27017';
 const client = new MongoClient(mongoUri);
 let db;
 
+function setDb(mockDb) {
+  db = mockDb;
+}
+
 // Connect to MongoDB
 client.connect()
   .then(() => {
@@ -209,5 +213,4 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on http://0.0.0.0:${PORT}`);
 });
 
-module.exports = app; // Export the app for testing or other purposes
-// This allows the app to be imported in test files or other modules.
+module.exports = { app, setDb };
