@@ -45,4 +45,10 @@ export default [
       ],
     },
   },
+  {
+    files: ['**/*.test.jsx'],
+    rules: {
+      'no-unused-vars': 'off',
+    },
+  },
 ]
