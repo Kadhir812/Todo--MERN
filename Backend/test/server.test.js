@@ -1,6 +1,6 @@
 const request = require('supertest');
 const { MongoClient } = require('mongodb');
-const { app, setDb } = require('../server');
+const { app, setDb, client, server } = require('../server');
 
 jest.setTimeout(20000); // 20 seconds
 
@@ -33,6 +33,8 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  if (client) await client.close();
+  if (server && server.close) await server.close();
   if (connection) await connection.close();
 });
 
