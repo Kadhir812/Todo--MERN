@@ -53,6 +53,10 @@ jobs:
             node -c server.js
           fi
 
+      - name: Fix Jest permissions
+        working-directory: ./Backend
+        run: chmod +x ./node_modules/.bin/jest
+
       # --- Frontend ---
       - name: Install Frontend Dependencies
         working-directory: ./Frontend
