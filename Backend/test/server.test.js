@@ -2,17 +2,29 @@ const request = require('supertest');
 const { MongoClient } = require('mongodb');
 const { app, setDb } = require('../server');
 
+jest.setTimeout(20000); // 20 seconds
+
 let connection;
 let db;
 
 const mongoUri = process.env.MONGO_URI || 'mongodb://localhost:27017';
 const dbName = process.env.MONGO_DBNAME || 'todo_app_test';
 
+async function waitForMongo(uri, dbName, retries = 10, delay = 2000) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const conn = await MongoClient.connect(uri, { });
+      return conn;
+    } catch (err) {
+      if (i === retries - 1) throw err;
+      await new Promise(res => setTimeout(res, delay));
+    }
+  }
+}
+
 beforeAll(async () => {
-  // Connect to MongoDB test database (works in CI and locally)
-  connection = await MongoClient.connect(mongoUri, {
-    useUnifiedTopology: true,
-  });
+  // Wait for MongoDB to be ready
+  connection = await waitForMongo(mongoUri, dbName);
   db = connection.db(dbName);
   setDb(db);
 
@@ -21,8 +33,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  // Clean up and close the connection
-  await connection.close();
+  if (connection) await connection.close();
 });
 
 describe('Todo API', () => {
