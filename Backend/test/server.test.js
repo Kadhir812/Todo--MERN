@@ -1,16 +1,25 @@
 const request = require('supertest');
+const { MongoClient } = require('mongodb');
 const { app, setDb } = require('../server');
 
-beforeAll(() => {
-  // Mock the db and collection methods
-  setDb({
-    collection: () => ({
-      find: () => ({
-        toArray: async () => ([]), // return empty array for GET /todos
-      }),
-      insertOne: async () => ({ insertedId: 'mockid' }),
-    }),
+let connection;
+let db;
+
+beforeAll(async () => {
+  // Connect to local MongoDB test database
+  connection = await MongoClient.connect('mongodb://localhost:27017', {
+    useUnifiedTopology: true,
   });
+  db = connection.db('todo_app_test');
+  setDb(db);
+
+  // Optionally, clear the todos collection before tests
+  await db.collection('todos').deleteMany({});
+});
+
+afterAll(async () => {
+  // Clean up and close the connection
+  await connection.close();
 });
 
 describe('Todo API', () => {
