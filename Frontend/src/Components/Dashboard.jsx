@@ -1,5 +1,6 @@
-import React from 'react';
+// import React from 'react';
 import { motion } from 'framer-motion'; // Import only Framer Motion
+import PropTypes from 'prop-types';
 
 function Dashboard({ todos, isDarkMode }) {
   // Calculate task statistics
@@ -80,5 +81,10 @@ function Dashboard({ todos, isDarkMode }) {
     </div>
   );
 }
+
+Dashboard.propTypes = {
+  todos: PropTypes.array.isRequired,
+  isDarkMode: PropTypes.bool.isRequired,
+};
 
 export default Dashboard;
