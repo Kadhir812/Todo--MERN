@@ -35,4 +35,11 @@ export default [
       ],
     },
   },
+  {
+    env: {
+      browser: true,
+      es2021: true,
+      jest: true,
+    },
+  },
 ]
