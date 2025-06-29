@@ -135,18 +135,20 @@ jobs:
           push: false
           tags: ${{ env.IMAGE_OWNER }}/todo-${{ matrix.service }}:${{ env.TAG }}
 
-      # 6️⃣ Scan Docker image with Trivy (local scan)
+      # 6️⃣ Install Trivy natively
+      - name: Install Trivy
+        uses: aquasecurity/trivy-action@0.20.0
+
+      # 7️⃣ Scan Docker image with Trivy (local scan)
       - name: Run Trivy scan
         run: |
-          docker run --rm \
-            -v /var/run/docker.sock:/var/run/docker.sock \
-            aquasec/trivy:0.50.2 image \
+          trivy image \
             --severity HIGH,CRITICAL \
             --exit-code 1 \
             --no-progress \
             ${{ env.IMAGE_OWNER }}/todo-${{ matrix.service }}:${{ env.TAG }}
 
-      # 7️⃣ Push Docker image to Docker Hub only if scan passes
+      # 8️⃣ Push Docker image to Docker Hub only if scan passes
       - name: Push Docker image
         uses: docker/build-push-action@v5
         with:
