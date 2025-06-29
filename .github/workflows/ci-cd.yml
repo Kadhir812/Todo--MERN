@@ -10,7 +10,8 @@ env:
   REGISTRY: docker.io
   BACKEND_IMAGE_NAME: todo-backend
   FRONTEND_IMAGE_NAME: todo-frontend
-
+  IMAGE_OWNER: kadhir812
+  
 jobs:
   test:
     runs-on: ubuntu-latest
