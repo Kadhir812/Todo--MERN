@@ -128,22 +128,34 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.service == 'backend' && env.BACKEND_IMAGE_NAME || env.FRONTEND_IMAGE_NAME }}
           tags: |
-            # type=ref,event=branch
-            # type=sha,prefix={{branch}}-
-            # type=raw,value=latest,enable={{is_default_branch}}
             type=raw,value=${{ steps.build_number.outputs.value }}
 
-      - name: Build and push Docker image
+      - name: Build Docker image (but do not push yet)
         uses: docker/build-push-action@v5
         with:
           context: ./${{ matrix.service == 'backend' && 'Backend' || 'Frontend' }}
           file: ./${{ matrix.service == 'backend' && 'Backend/Dockerfile' || 'Frontend/Dockerfile.prod' }}
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          platforms: linux/amd64,linux/arm64
+          push: false
+          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.service == 'backend' && env.BACKEND_IMAGE_NAME || env.FRONTEND_IMAGE_NAME }}:${{ steps.build_number.outputs.value }}
+
+      - name: Run Trivy scan on local image
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+            -v ${{ github.workspace }}:/workspace \
+            aquasec/trivy:0.50.2 image \
+            --format sarif \
+            --output trivy-results-${{ matrix.service }}-${{ steps.build_number.outputs.value }}.sarif \
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.service == 'backend' && env.BACKEND_IMAGE_NAME || env.FRONTEND_IMAGE_NAME }}:${{ steps.build_number.outputs.value }}
+
+      - name: Push Docker image
+        run: |
+          docker push ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.service == 'backend' && env.BACKEND_IMAGE_NAME || env.FRONTEND_IMAGE_NAME }}:${{ steps.build_number.outputs.value }}
+
+      - name: Upload SARIF to GitHub Security tab
+        if: success() && hashFiles('trivy-results-${{ matrix.service }}-${{ steps.build_number.outputs.value }}.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-results-${{ matrix.service }}-${{ steps.build_number.outputs.value }}.sarif
 
   deploy:
     needs: build-and-push
