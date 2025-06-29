@@ -136,7 +136,7 @@ jobs:
           context: ./${{ matrix.service == 'backend' && 'Backend' || 'Frontend' }}
           file: ./${{ matrix.service == 'backend' && 'Backend/Dockerfile' || 'Frontend/Dockerfile.prod' }}
           push: false
-          tags: ${{ env.REGISTRY }}/kadhir812/${{ matrix.service == 'backend' && env.BACKEND_IMAGE_NAME || env.FRONTEND_IMAGE_NAME }}:${{ steps.build_number.outputs.value }}
+          tags: kadhir812/todo-${{ matrix.service }}:${{ steps.build_number.outputs.value }}
 
       - name: Run Trivy scan on local image
         run: |
@@ -145,11 +145,12 @@ jobs:
             aquasec/trivy:0.50.2 image \
             --format sarif \
             --output trivy-results-${{ matrix.service }}-${{ steps.build_number.outputs.value }}.sarif \
-            ${{ env.REGISTRY }}/kadhir812/${{ matrix.service == 'backend' && env.BACKEND_IMAGE_NAME || env.FRONTEND_IMAGE_NAME }}:${{ steps.build_number.outputs.value }}
+            kadhir812/todo-${{ matrix.service }}:${{ steps.build_number.outputs.value }}
 
       - name: Push Docker image
         run: |
-          docker push ${{ env.REGISTRY }}/kadhir812/${{ matrix.service == 'backend' && env.BACKEND_IMAGE_NAME || env.FRONTEND_IMAGE_NAME }}:${{ steps.build_number.outputs.value }}
+          docker tag kadhir812/todo-${{ matrix.service }}:${{ steps.build_number.outputs.value }} ${{ env.REGISTRY }}/kadhir812/todo-${{ matrix.service }}:${{ steps.build_number.outputs.value }}
+          docker push ${{ env.REGISTRY }}/kadhir812/todo-${{ matrix.service }}:${{ steps.build_number.outputs.value }}
 
       - name: Upload SARIF to GitHub Security tab
         if: success() && hashFiles('trivy-results-${{ matrix.service }}-${{ steps.build_number.outputs.value }}.sarif') != ''
