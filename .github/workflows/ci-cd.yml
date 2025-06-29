@@ -146,7 +146,7 @@ jobs:
             --severity HIGH,CRITICAL \
             --exit-code 1 \
             --no-progress \
-            ${{ env.IMAGE_OWNER }}/todo-${{ matrix.service }}:${{ env.TAG }}
+            $IMAGE_OWNER/todo-${{ matrix.service }}:$TAG
 
       # 8️⃣ Push Docker image to Docker Hub only if scan passes
       - name: Push Docker image
