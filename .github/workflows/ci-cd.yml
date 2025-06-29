@@ -96,70 +96,66 @@ jobs:
             echo "No test script found. Build verification passed."
           fi
 
-  build-and-push:
+  build-scan-push:
     needs: test
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop')
 
     strategy:
       matrix:
         service: [backend, frontend]
 
     steps:
+      # 1️⃣ Checkout code
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
+      # 2️⃣ Setup Docker Buildx
+      - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      # 3️⃣ Login to Docker Hub
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
-      - name: Set build number
-        id: build_number
-        run: echo "value=v${{ github.run_number }}" >> $GITHUB_OUTPUT
+      # 4️⃣ Set image tag — use run number
+      - name: Set image tag
+        id: vars
+        run: echo "TAG=v${{ github.run_number }}" >> $GITHUB_ENV
 
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/kadhir812/${{ matrix.service == 'backend' && env.BACKEND_IMAGE_NAME || env.FRONTEND_IMAGE_NAME }}
-          tags: |
-            type=raw,value=${{ steps.build_number.outputs.value }}
-
-      - name: Build Docker image (but do not push yet)
+      # 5️⃣ Build Docker image (local only for scan first)
+      - name: Build Docker image
         uses: docker/build-push-action@v5
         with:
           context: ./${{ matrix.service == 'backend' && 'Backend' || 'Frontend' }}
           file: ./${{ matrix.service == 'backend' && 'Backend/Dockerfile' || 'Frontend/Dockerfile.prod' }}
           push: false
-          tags: kadhir812/todo-${{ matrix.service }}:${{ steps.build_number.outputs.value }}
+          tags: ${{ env.IMAGE_OWNER }}/todo-${{ matrix.service }}:${{ env.TAG }}
 
-      - name: Run Trivy scan on local image
+      # 6️⃣ Scan Docker image with Trivy (local scan)
+      - name: Run Trivy scan
         run: |
-          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
-            -v ${{ github.workspace }}:/workspace \
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
             aquasec/trivy:0.50.2 image \
-            --format sarif \
-            --output trivy-results-${{ matrix.service }}-${{ steps.build_number.outputs.value }}.sarif \
-            kadhir812/todo-${{ matrix.service }}:${{ steps.build_number.outputs.value }}
+            --severity HIGH,CRITICAL \
+            --exit-code 1 \
+            --no-progress \
+            ${{ env.IMAGE_OWNER }}/todo-${{ matrix.service }}:${{ env.TAG }}
 
+      # 7️⃣ Push Docker image to Docker Hub only if scan passes
       - name: Push Docker image
-        run: |
-          docker tag kadhir812/todo-${{ matrix.service }}:${{ steps.build_number.outputs.value }} ${{ env.REGISTRY }}/kadhir812/todo-${{ matrix.service }}:${{ steps.build_number.outputs.value }}
-          docker push ${{ env.REGISTRY }}/kadhir812/todo-${{ matrix.service }}:${{ steps.build_number.outputs.value }}
-
-      - name: Upload SARIF to GitHub Security tab
-        if: success() && hashFiles('trivy-results-${{ matrix.service }}-${{ steps.build_number.outputs.value }}.sarif') != ''
-        uses: github/codeql-action/upload-sarif@v3
+        uses: docker/build-push-action@v5
         with:
-          sarif_file: trivy-results-${{ matrix.service }}-${{ steps.build_number.outputs.value }}.sarif
+          context: ./${{ matrix.service == 'backend' && 'Backend' || 'Frontend' }}
+          file: ./${{ matrix.service == 'backend' && 'Backend/Dockerfile' || 'Frontend/Dockerfile.prod' }}
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/todo-${{ matrix.service }}:${{ env.TAG }}
 
   deploy:
-    needs: build-and-push
+    needs: build-scan-push
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/master'
 
@@ -242,7 +238,7 @@ jobs:
       #       docker system prune -f
 
   security-scan:
-    needs: build-and-push
+    needs: build-scan-push
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
 
@@ -271,7 +267,7 @@ jobs:
           sarif_file: trivy-results-${{ matrix.service }}-${{ matrix.tag }}.sarif
 
   wait:
-    needs: build-and-push
+    needs: build-scan-push
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop')
 
