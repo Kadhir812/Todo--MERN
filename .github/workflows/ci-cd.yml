@@ -135,9 +135,11 @@ jobs:
           push: false
           tags: ${{ env.IMAGE_OWNER }}/todo-${{ matrix.service }}:${{ env.TAG }}
 
-      # 6️⃣ Install Trivy natively
+      # 6️⃣ Install Trivy natively (latest CLI)
       - name: Install Trivy
-        uses: aquasecurity/trivy-action@0.20.0
+        run: |
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh
+          sudo mv trivy /usr/local/bin/
 
       # 7️⃣ Scan Docker image with Trivy (local scan)
       - name: Run Trivy scan
