@@ -118,6 +118,10 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
+      - name: Set build number
+        id: build_number
+        run: echo "value=v${{ github.run_number }}" >> $GITHUB_OUTPUT
+
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v5
@@ -127,7 +131,7 @@ jobs:
             type=ref,event=branch
             type=sha,prefix={{branch}}-
             type=raw,value=latest,enable={{is_default_branch}}
-            type=semver,pattern=v{{version}}
+            type=raw,value=${{ steps.build_number.outputs.value }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
@@ -229,21 +233,40 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
 
-    strategy:
-      matrix:
-        service: [backend, frontend]
-        tag: [latest, latest]
-
     steps:
-      - name: Run Trivy vulnerability scanner
+      - name: Set build number
+        id: build_number
+        run: echo "value=v${{ github.run_number }}" >> $GITHUB_OUTPUT
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner (latest)
         uses: aquasecurity/trivy-action@0.20.0
         with:
-          image-ref: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.service == 'backend' && env.BACKEND_IMAGE_NAME || env.FRONTEND_IMAGE_NAME }}:${{ matrix.tag }}
+          image-ref: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.service == 'backend' && env.BACKEND_IMAGE_NAME || env.FRONTEND_IMAGE_NAME }}:latest
           format: 'sarif'
-          output: 'trivy-results-${{ matrix.service }}-${{ matrix.tag }}.sarif'
+          output: 'trivy-results-${{ matrix.service }}-latest.sarif'
 
-      - name: Upload Trivy scan results to GitHub Security tab
+      - name: Run Trivy vulnerability scanner (build number)
+        uses: aquasecurity/trivy-action@0.20.0
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.service == 'backend' && env.BACKEND_IMAGE_NAME || env.FRONTEND_IMAGE_NAME }}:${{ steps.build_number.outputs.value }}
+          format: 'sarif'
+          output: 'trivy-results-${{ matrix.service }}-${{ steps.build_number.outputs.value }}.sarif'
+
+      - name: Upload Trivy scan results for latest
         uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
-          sarif_file: trivy-results-${{ matrix.service }}-${{ matrix.tag }}.sarif
+          sarif_file: trivy-results-${{ matrix.service }}-latest.sarif
+
+      - name: Upload Trivy scan results for build number
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-results-${{ matrix.service }}-${{ steps.build_number.outputs.value }}.sarif
+
+    strategy:
+      matrix:
+        service: [backend, frontend]
