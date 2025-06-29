@@ -141,6 +141,9 @@ jobs:
 
       # 7️⃣ Scan Docker image with Trivy (local scan)
       - name: Run Trivy scan
+        env:
+          IMAGE_OWNER: ${{ env.IMAGE_OWNER }}
+          TAG: ${{ env.TAG }}
         run: |
           trivy image \
             --severity HIGH,CRITICAL \
