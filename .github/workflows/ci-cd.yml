@@ -128,9 +128,9 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.service == 'backend' && env.BACKEND_IMAGE_NAME || env.FRONTEND_IMAGE_NAME }}
           tags: |
-            type=ref,event=branch
-            type=sha,prefix={{branch}}-
-            type=raw,value=latest,enable={{is_default_branch}}
+            # type=ref,event=branch
+            # type=sha,prefix={{branch}}-
+            # type=raw,value=latest,enable={{is_default_branch}}
             type=raw,value=${{ steps.build_number.outputs.value }}
 
       - name: Build and push Docker image
