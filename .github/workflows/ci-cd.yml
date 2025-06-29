@@ -233,40 +233,26 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
 
-    steps:
-      - name: Set build number
-        id: build_number
-        run: echo "value=v${{ github.run_number }}" >> $GITHUB_OUTPUT
-
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Run Trivy vulnerability scanner (latest)
-        uses: aquasecurity/trivy-action@0.20.0
-        with:
-          image-ref: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.service == 'backend' && env.BACKEND_IMAGE_NAME || env.FRONTEND_IMAGE_NAME }}:latest
-          format: 'sarif'
-          output: 'trivy-results-${{ matrix.service }}-latest.sarif'
-
-      - name: Run Trivy vulnerability scanner (build number)
-        uses: aquasecurity/trivy-action@0.20.0
-        with:
-          image-ref: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.service == 'backend' && env.BACKEND_IMAGE_NAME || env.FRONTEND_IMAGE_NAME }}:${{ steps.build_number.outputs.value }}
-          format: 'sarif'
-          output: 'trivy-results-${{ matrix.service }}-${{ steps.build_number.outputs.value }}.sarif'
-
-      - name: Upload Trivy scan results for latest
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
-        with:
-          sarif_file: trivy-results-${{ matrix.service }}-latest.sarif
-
-      - name: Upload Trivy scan results for build number
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
-        with:
-          sarif_file: trivy-results-${{ matrix.service }}-${{ steps.build_number.outputs.value }}.sarif
-
     strategy:
       matrix:
         service: [backend, frontend]
+        tag: [latest, "v${{ github.run_number }}"]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@0.20.0
+        with:
+          image-ref: docker.io/Kadhir812/todo-${{ matrix.service }}:${{ matrix.tag }}
+          format: sarif
+          output: trivy-results-${{ matrix.service }}-${{ matrix.tag }}.sarif
+          vuln-type: os,library
+          severity: UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
+
+      - name: Upload SARIF to GitHub Security tab
+        if: success() && hashFiles('trivy-results-${{ matrix.service }}-${{ matrix.tag }}.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-results-${{ matrix.service }}-${{ matrix.tag }}.sarif
