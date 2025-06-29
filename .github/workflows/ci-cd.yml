@@ -256,3 +256,12 @@ jobs:
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: trivy-results-${{ matrix.service }}-${{ matrix.tag }}.sarif
+
+  wait:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop')
+
+    steps:
+      - name: Wait for Docker Hub sync
+        run: sleep 15
