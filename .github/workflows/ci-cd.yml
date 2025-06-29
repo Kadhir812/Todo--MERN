@@ -236,7 +236,7 @@ jobs:
     strategy:
       matrix:
         service: [backend, frontend]
-        tag: [latest, "v${{ github.run_number }}"]
+        tag: ["v${{ github.run_number }}"]
 
     steps:
       - name: Checkout code
