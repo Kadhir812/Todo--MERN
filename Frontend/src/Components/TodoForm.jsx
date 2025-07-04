@@ -1,4 +1,7 @@
-import React, { useState } from 'react';
+// eslint-disable-next-line no-unused-vars
+import React from 'react';
+import  { useState } from 'react';
+import PropTypes from 'prop-types';
 
 function TodoForm({ addTodo, isDarkMode }) {
   const [task, setTask] = useState('');
@@ -69,5 +72,10 @@ function TodoForm({ addTodo, isDarkMode }) {
     </form>
   );
 }
+
+TodoForm.propTypes = {
+  addTodo: PropTypes.func.isRequired,
+  isDarkMode: PropTypes.bool.isRequired,
+};
 
 export default TodoForm;

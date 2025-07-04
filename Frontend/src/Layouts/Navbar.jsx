@@ -1,7 +1,10 @@
-import React, { useState } from 'react';
+// eslint-disable-next-line no-unused-vars
+import React from 'react';
+import { useState } from 'react';
+import PropTypes from 'prop-types';
 import ToggleSwitch from '../Components/ToggleSwitch';
 
-export default function Navbar({ todos, onToggleDarkMode, isDarkMode }) {
+function Navbar({ todos, onToggleDarkMode, isDarkMode }) {
   const [isOpen, setIsOpen] = useState(false);
 
   const toggleMenu = () => {
@@ -35,8 +38,6 @@ export default function Navbar({ todos, onToggleDarkMode, isDarkMode }) {
               Signup
             </button>
           </div>
-
-          
 
           {/* Mobile Menu Button */}
           <div className="sm:hidden">
@@ -94,3 +95,11 @@ export default function Navbar({ todos, onToggleDarkMode, isDarkMode }) {
     </nav>
   );
 }
+
+Navbar.propTypes = {
+  todos: PropTypes.array.isRequired,
+  onToggleDarkMode: PropTypes.func.isRequired,
+  isDarkMode: PropTypes.bool.isRequired,
+};
+
+export default Navbar;

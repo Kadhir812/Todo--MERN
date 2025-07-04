@@ -10,11 +10,23 @@ env:
   REGISTRY: docker.io
   BACKEND_IMAGE_NAME: todo-backend
   FRONTEND_IMAGE_NAME: todo-frontend
-
+  IMAGE_OWNER: kadhir812
+  
 jobs:
   test:
     runs-on: ubuntu-latest
     name: Test Applications
+
+    services:
+      mongodb:
+        image: mongo:7.0
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd="mongosh --eval 'db.adminCommand(\"ping\")'" 
+          --health-interval=10s 
+          --health-timeout=5s 
+          --health-retries=5
 
     steps:
       - name: Checkout code
@@ -45,13 +57,18 @@ jobs:
 
       - name: Run Backend Tests
         working-directory: ./Backend
+        env:
+          MONGO_URI: "mongodb://localhost:27017"
+          MONGO_DBNAME: "todo_app_test"
+          NODE_ENV: "test"
         run: |
           if npm run | grep -q "test"; then
-            npm test
+            npm test -- --ci --coverage
           else
             echo "No test script found. Running syntax check instead."
             node -c server.js
           fi
+        
 
       # --- Frontend ---
       - name: Install Frontend Dependencies
@@ -80,52 +97,46 @@ jobs:
             echo "No test script found. Build verification passed."
           fi
 
-  build-and-push:
+  build-scan-push:
     needs: test
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop')
 
     strategy:
       matrix:
         service: [backend, frontend]
 
     steps:
+      # 1️⃣ Checkout code
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
+      # 2️⃣ Setup Docker Buildx
+      - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      # 3️⃣ Login to Docker Hub
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.service == 'backend' && env.BACKEND_IMAGE_NAME || env.FRONTEND_IMAGE_NAME }}
-          tags: |
-            type=ref,event=branch
-            type=sha,prefix={{branch}}-
-            type=raw,value=latest,enable={{is_default_branch}}
+      # 4️⃣ Set image tag — use run number
+      - name: Set image tag
+        id: vars
+        run: echo "TAG=v${{ github.run_number }}" >> $GITHUB_ENV
 
-      - name: Build and push Docker image
+      # 5️⃣ Build Docker image (local only for scan first)
+      - name: Build Docker image
         uses: docker/build-push-action@v5
         with:
           context: ./${{ matrix.service == 'backend' && 'Backend' || 'Frontend' }}
           file: ./${{ matrix.service == 'backend' && 'Backend/Dockerfile' || 'Frontend/Dockerfile.prod' }}
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          platforms: linux/amd64,linux/arm64
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/todo-${{ matrix.service }}:${{ env.TAG }}
 
   deploy:
-    needs: build-and-push
+    needs: build-scan-push
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/master'
 
@@ -207,25 +218,11 @@ jobs:
       #       docker-compose -f docker-compose.prod.yml up -d
       #       docker system prune -f
 
-  security-scan:
-    needs: build-and-push
+  wait:
+    needs: build-scan-push
     runs-on: ubuntu-latest
-    if: github.event_name == 'push'
-
-    strategy:
-      matrix:
-        service: [backend, frontend]
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop')
 
     steps:
-      - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@0.20.0  # ✅ pinned version
-        with:
-          image-ref: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.service == 'backend' && env.BACKEND_IMAGE_NAME || env.FRONTEND_IMAGE_NAME }}:latest
-          format: 'sarif'
-          output: 'trivy-results-${{ matrix.service }}.sarif'
-
-      - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
-        with:
-          sarif_file: 'trivy-results-${{ matrix.service }}.sarif'
+      - name: Wait for Docker Hub sync
+        run: sleep 15

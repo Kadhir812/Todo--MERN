@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+// eslint-disable-next-line no-unused-vars
+import React from 'react';
+import { useState, useEffect } from 'react';
 import TodoForm from './Components/TodoForm';
 import TodoList from './Components/TodoList';
 import Dashboard from './Components/Dashboard';

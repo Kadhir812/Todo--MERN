@@ -1,6 +1,8 @@
 // src/components/ToggleSwitch.jsx
-import React, { useState } from 'react';
+import React from 'react'; // eslint-disable-line no-unused-vars
+import  { useState } from 'react';
 import { motion } from 'framer-motion';
+import PropTypes from 'prop-types';
 
 const ToggleSwitch = ({ onToggle }) => {
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -29,6 +31,10 @@ const ToggleSwitch = ({ onToggle }) => {
       <span className="ml-2 text-gray-800 font-semibold dark:text-green-500">Dark</span>
     </div>
   );
+};
+
+ToggleSwitch.propTypes = {
+  onToggle: PropTypes.func.isRequired,
 };
 
 export default ToggleSwitch;

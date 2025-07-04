@@ -5,12 +5,23 @@ import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 
 export default [
-  { ignores: ['dist'] },
+  js.configs.recommended,
   {
+    ignores: ['dist'],
     files: ['**/*.{js,jsx}'],
     languageOptions: {
       ecmaVersion: 2020,
-      globals: globals.browser,
+      globals: {
+        ...globals.browser,
+        // Jest globals
+        test: true,
+        expect: true,
+        describe: true,
+        beforeAll: true,
+        afterAll: true,
+        beforeEach: true,
+        afterEach: true,
+      },
       parserOptions: {
         ecmaVersion: 'latest',
         ecmaFeatures: { jsx: true },
@@ -24,7 +35,6 @@ export default [
       'react-refresh': reactRefresh,
     },
     rules: {
-      ...js.configs.recommended.rules,
       ...react.configs.recommended.rules,
       ...react.configs['jsx-runtime'].rules,
       ...reactHooks.configs.recommended.rules,
@@ -32,6 +42,21 @@ export default [
       'react-refresh/only-export-components': [
         'warn',
         { allowConstantExport: true },
+      ],
+    },
+  },
+  {
+    files: ['**/*.test.jsx'],
+    rules: {
+      'no-unused-vars': 'off',
+    },
+  },
+  {
+    files: ['**/*.{js,jsx}'],
+    rules: {
+      'no-unused-vars': [
+        'error',
+        { varsIgnorePattern: '^React$' }
       ],
     },
   },

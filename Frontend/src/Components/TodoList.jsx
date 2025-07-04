@@ -1,5 +1,8 @@
-import React, { useState } from "react";
+// eslint-disable-next-line no-unused-vars
+import React from 'react';
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import PropTypes from "prop-types";
 
 function TodoList({ todos, updateTodo, deleteTodo, isDarkMode }) {
   const [editingTodo, setEditingTodo] = useState(null);
@@ -185,5 +188,13 @@ function TodoList({ todos, updateTodo, deleteTodo, isDarkMode }) {
     </div>
   );
 }
+
+
+TodoList.propTypes = {
+  todos: PropTypes.array.isRequired,
+  updateTodo: PropTypes.func.isRequired,
+  deleteTodo: PropTypes.func.isRequired,
+  isDarkMode: PropTypes.bool.isRequired,
+};
 
 export default TodoList;

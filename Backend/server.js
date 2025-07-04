@@ -6,13 +6,17 @@ const moment = require('moment-timezone');
 const app = express();
 app.use(cors());
 app.use(express.json());
-//while building image use the below mongod line
+// //while building image use the below mongod line
 // const mongoUri = 'mongodb://mongod:27017'; 
 
 //while running locally use the below localhost line
 const mongoUri = 'mongodb://localhost:27017'; 
 const client = new MongoClient(mongoUri);
 let db;
+
+function setDb(mockDb) {
+  db = mockDb;
+}
 
 // Connect to MongoDB
 client.connect()
@@ -205,6 +209,8 @@ process.on('SIGINT', async () => {
 
 // Start the server
 const PORT = 5000;
-app.listen(PORT, '0.0.0.0', () => {
+const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on http://0.0.0.0:${PORT}`);
 });
+
+module.exports = { app, setDb, client, server };
