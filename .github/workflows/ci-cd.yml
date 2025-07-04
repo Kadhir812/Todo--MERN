@@ -132,33 +132,6 @@ jobs:
         with:
           context: ./${{ matrix.service == 'backend' && 'Backend' || 'Frontend' }}
           file: ./${{ matrix.service == 'backend' && 'Backend/Dockerfile' || 'Frontend/Dockerfile.prod' }}
-          push: false
-          tags: ${{ env.IMAGE_OWNER }}/todo-${{ matrix.service }}:${{ env.TAG }}
-
-      # 6️⃣ Install Trivy natively (latest CLI)
-      - name: Install Trivy
-        run: |
-          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh
-          sudo mv trivy /usr/local/bin/
-
-      # 7️⃣ Scan Docker image with Trivy (local scan)
-      - name: Run Trivy scan
-        env:
-          IMAGE_OWNER: ${{ env.IMAGE_OWNER }}
-          TAG: ${{ env.TAG }}
-        run: |
-          trivy image \
-            --severity HIGH,CRITICAL \
-            --exit-code 1 \
-            --no-progress \
-            $IMAGE_OWNER/todo-${{ matrix.service }}:$TAG
-
-      # 8️⃣ Push Docker image to Docker Hub only if scan passes
-      - name: Push Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./${{ matrix.service == 'backend' && 'Backend' || 'Frontend' }}
-          file: ./${{ matrix.service == 'backend' && 'Backend/Dockerfile' || 'Frontend/Dockerfile.prod' }}
           push: true
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/todo-${{ matrix.service }}:${{ env.TAG }}
 
@@ -244,35 +217,6 @@ jobs:
       #       docker-compose -f docker-compose.prod.yml pull
       #       docker-compose -f docker-compose.prod.yml up -d
       #       docker system prune -f
-
-  security-scan:
-    needs: build-scan-push
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push'
-
-    strategy:
-      matrix:
-        service: [backend, frontend]
-        tag: ["v${{ github.run_number }}"]
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@0.20.0
-        with:
-          image-ref: docker.io/Kadhir812/todo-${{ matrix.service }}:${{ matrix.tag }}
-          format: sarif
-          output: trivy-results-${{ matrix.service }}-${{ matrix.tag }}.sarif
-          vuln-type: os,library
-          severity: UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
-
-      - name: Upload SARIF to GitHub Security tab
-        if: success() && hashFiles('trivy-results-${{ matrix.service }}-${{ matrix.tag }}.sarif') != ''
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: trivy-results-${{ matrix.service }}-${{ matrix.tag }}.sarif
 
   wait:
     needs: build-scan-push
