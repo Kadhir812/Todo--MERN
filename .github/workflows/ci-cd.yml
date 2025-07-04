@@ -133,11 +133,13 @@ jobs:
           context: ./${{ matrix.service == 'backend' && 'Backend' || 'Frontend' }}
           file: ./${{ matrix.service == 'backend' && 'Backend/Dockerfile' || 'Frontend/Dockerfile.prod' }}
           push: true
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/todo-${{ matrix.service }}:${{ env.TAG }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/todo-${{ matrix.service }}:${{ env.TAG }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/todo-${{ matrix.service }}:latest
 
   deploy:
     needs: build-scan-push
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     if: github.ref == 'refs/heads/master'
 
     steps:
@@ -199,11 +201,13 @@ jobs:
               driver: bridge
           EOF
 
-      - name: Deploy to production server
+      - name: Deploy with Docker Compose
         run: |
-          echo "Docker Compose file generated."
-          echo "To deploy, copy docker-compose.prod.yml to your server and run:"
-          echo "docker-compose -f docker-compose.prod.yml up -d"
+          docker-compose -f docker-compose.prod.yml pull
+          docker-compose -f docker-compose.prod.yml down
+          docker-compose -f docker-compose.prod.yml up -d
+          # Remove old todo images except latest
+          docker images "${{ env.REGISTRY }}/${{ github.repository_owner }}/todo-*" --format "{{.Repository}}:{{.Tag}}" | grep -v ":latest" | xargs -r docker rmi || true
 
       # --- Optional: Enable for real SSH deployment ---
       # - name: Deploy to remote server
