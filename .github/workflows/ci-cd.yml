@@ -208,7 +208,7 @@ jobs:
           docker-compose -f docker-compose.prod.yml down
           docker-compose -f docker-compose.prod.yml up -d
           # Remove old todo images except latest
-          docker images "${{ env.REGISTRY }}/${{ github.repository_owner }}/todo-*" --format "{{.Repository}}:{{.Tag}}" | grep -v ":latest" | xargs -r docker rmi || true
+          docker images "${{ env.REGISTRY }}/${{ github.repository_owner }}/todo-*" --format "{{.Repository}}:{{.Tag}}" | Select-String -NotMatch ":latest" | ForEach-Object { docker rmi $_.ToString().Trim() } -ErrorAction SilentlyContinue
 
       # --- Optional: Enable for real SSH deployment ---
       # - name: Deploy to remote server
