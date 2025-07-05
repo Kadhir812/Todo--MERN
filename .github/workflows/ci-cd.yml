@@ -147,8 +147,9 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Create docker-compose for deployment
+        shell: pwsh
         run: |
-          cat > docker-compose.prod.yml << EOF
+          @"
           version: '3.8'
 
           services:
@@ -161,8 +162,8 @@ jobs:
               volumes:
                 - mongodb_data:/data/db
               environment:
-                MONGO_INITDB_ROOT_USERNAME: \${MONGO_ROOT_USERNAME:-admin}
-                MONGO_INITDB_ROOT_PASSWORD: \${MONGO_ROOT_PASSWORD:-password}
+                MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:-admin}
+                MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-password}
               networks:
                 - todo-network
 
@@ -199,7 +200,7 @@ jobs:
           networks:
             todo-network:
               driver: bridge
-          EOF
+          "@ | Set-Content -NoNewline docker-compose.prod.yml
 
       - name: Deploy with Docker Compose
         run: |
