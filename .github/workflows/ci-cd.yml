@@ -147,7 +147,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Create docker-compose for deployment
-        shell: pwsh
+        shell: powershell
         run: |
           @"
           version: '3.8'
