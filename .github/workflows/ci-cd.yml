@@ -149,8 +149,7 @@ jobs:
       - name: Create docker-compose for deployment
         shell: powershell
         run: |
-          @"
-          version: '3.8'
+          @
 
           services:
             mongodb:
@@ -168,7 +167,7 @@ jobs:
                 - todo-network
 
             backend:
-              image: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.BACKEND_IMAGE_NAME }}:latest
+              image: kadhir812/${{ github.repository_owner }}/${{ env.BACKEND_IMAGE_NAME }}:latest
               container_name: todo-backend
               restart: unless-stopped
               ports:
@@ -182,7 +181,7 @@ jobs:
                 - todo-network
 
             frontend:
-              image: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.FRONTEND_IMAGE_NAME }}:latest
+              image: kadhir812/${{ github.repository_owner }}/${{ env.FRONTEND_IMAGE_NAME }}:latest
               container_name: todo-frontend
               restart: unless-stopped
               ports:
