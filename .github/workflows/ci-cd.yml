@@ -146,60 +146,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Create docker-compose for deployment
-        shell: powershell
-        run: |
-          @
-
-          services:
-            mongodb:
-              image: mongo:7.0
-              container_name: todo-mongodb
-              restart: unless-stopped
-              ports:
-                - "27017:27017"
-              volumes:
-                - mongodb_data:/data/db
-              environment:
-                MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:-admin}
-                MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-password}
-              networks:
-                - todo-network
-
-            backend:
-              image: kadhir812/${{ github.repository_owner }}/${{ env.BACKEND_IMAGE_NAME }}:latest
-              container_name: todo-backend
-              restart: unless-stopped
-              ports:
-                - "5000:5000"
-              depends_on:
-                - mongodb
-              environment:
-                NODE_ENV: production
-                MONGODB_URI: mongodb://mongodb:27017
-              networks:
-                - todo-network
-
-            frontend:
-              image: kadhir812/${{ github.repository_owner }}/${{ env.FRONTEND_IMAGE_NAME }}:latest
-              container_name: todo-frontend
-              restart: unless-stopped
-              ports:
-                - "80:80"
-              depends_on:
-                - backend
-              environment:
-                VITE_API_URL: http://localhost:5000
-              networks:
-                - todo-network
-
-          volumes:
-            mongodb_data:
-
-          networks:
-            todo-network:
-              driver: bridge
-          "@ | Set-Content -NoNewline docker-compose.prod.yml
+      # - name: Create docker-compose for deployment
+      #   shell: powershell
+      #   run: |
+      #     # This step is no longer needed as docker-compose.prod.yml is committed in the repo.
 
       - name: Deploy with Docker Compose
         run: |
