@@ -204,7 +204,7 @@ jobs:
           docker run -d --name todo-frontend `
             --network mern-network `
             -p 3000:80 `
-            -e VITE_API_URL=http://todo-backend:5000 `
+            -e VITE_API_URL=http://todo-backend:5050 `
             ${{ env.REGISTRY }}/${{ env.OWNER }}/${{ env.FRONTEND }}:${{ env.TAG }}
 
       # 6️⃣ Prune unused images (older than 24h)
