@@ -165,19 +165,24 @@ jobs:
           docker pull ${{ env.REGISTRY }}/${{ env.OWNER }}/${{ env.FRONTEND }}:${{ env.TAG }}
 
       # 3️⃣ Stop & remove old containers
-      - name: Stop old containers
-        shell: cmd
-        run: |
-          docker stop todo-backend  || ver >null
-          docker stop todo-frontend || ver >null
-          docker rm   todo-backend  || ver >null
-          docker rm   todo-frontend || ver >null
-
-      # 3️⃣ Create custom Docker network if not exists
-      - name: Create Docker network
+      - name: Stop and remove old containers if they exist
         shell: powershell
         run: |
-          docker network inspect mern-network >/dev/null 2>&1 -or docker network create mern-network
+         $containers = @("todo-backend", "todo-frontend")
+         foreach ($container in $containers) {
+           if (docker ps -a --format "{{.Names}}" | Select-String -Pattern $container) {
+             docker stop $container
+             docker rm $container
+           } else {
+             Write-Host "Container $container does not exist, skipping."
+           }
+          }
+
+      # # 3️⃣ Create custom Docker network if not exists
+      # - name: Create Docker network
+      #   shell: powershell
+      #   run: |
+      #     docker network inspect mern-network >/dev/null 2>&1 -or docker network create mern-network
 
       # 4️⃣ Start new backend container
       - name: Start backend
