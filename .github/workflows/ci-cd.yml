@@ -142,41 +142,56 @@ jobs:
     runs-on: self-hosted
     if: github.ref == 'refs/heads/master'
 
+    env:
+      REGISTRY: docker.io
+      OWNER: kadhir812
+      BACKEND: todo-backend
+      FRONTEND: todo-frontend
+      TAG: latest # or use ${{ env.TAG }} for versioned deploy
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      # - name: Create docker-compose for deployment
-      #   shell: powershell
-      #   run: |
-      #     # This step is no longer needed as docker-compose.prod.yml is committed in the repo.
+      # 1️⃣ Log in to Docker Hub
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
-      - name: Deploy with Docker Compose
+      # 2️⃣ Pull new images
+      - name: Pull images
         run: |
-          docker-compose -f docker-compose.prod.yml pull
-          docker-compose -f docker-compose.prod.yml down
-          docker-compose -f docker-compose.prod.yml up -d
-          # Remove old todo images except latest
-          docker images "${{ env.REGISTRY }}/${{ github.repository_owner }}/todo-*" --format "{{.Repository}}:{{.Tag}}" | Select-String -NotMatch ":latest" | ForEach-Object { docker rmi $_.ToString().Trim() } -ErrorAction SilentlyContinue
+          docker pull ${{ env.REGISTRY }}/${{ env.OWNER }}/${{ env.BACKEND }}:${{ env.TAG }}
+          docker pull ${{ env.REGISTRY }}/${{ env.OWNER }}/${{ env.FRONTEND }}:${{ env.TAG }}
 
-      # --- Optional: Enable for real SSH deployment ---
-      # - name: Deploy to remote server
-      #   uses: appleboy/ssh-action@v1.0.0
-      #   with:
-      #     host: ${{ secrets.HOST }}
-      #     username: ${{ secrets.USERNAME }}
-      #     key: ${{ secrets.SSH_KEY }}
-      #     script: |
-      #       cd /path/to/app
-      #       docker-compose -f docker-compose.prod.yml pull
-      #       docker-compose -f docker-compose.prod.yml up -d
-      #       docker system prune -f
+      # 3️⃣ Stop & remove old containers
+      - name: Stop old containers
+        shell: bash
+        run: |
+          docker stop todo-backend  || true
+          docker stop todo-frontend || true
+          docker rm   todo-backend  || true
+          docker rm   todo-frontend || true
 
-  wait:
-    needs: build-scan-push
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop')
+      # 4️⃣ Start new backend container
+      - name: Start backend
+        run: |
+          docker run -d --name todo-backend \
+            -p 5000:5000 \
+            -e NODE_ENV=production \
+            -e MONGODB_URI=mongodb://host.docker.internal:27017 \
+            ${{ env.REGISTRY }}/${{ env.OWNER }}/${{ env.BACKEND }}:${{ env.TAG }}
 
-    steps:
-      - name: Wait for Docker Hub sync
-        run: sleep 15
+      # 5️⃣ Start new frontend container
+      - name: Start frontend
+        run: |
+          docker run -d --name todo-frontend \
+            -p 80:80 \
+            -e VITE_API_URL=http://localhost:5000 \
+            ${{ env.REGISTRY }}/${{ env.OWNER }}/${{ env.FRONTEND }}:${{ env.TAG }}
+
+      # 6️⃣ Prune unused images (older than 24h)
+      - name: Clean up
+        run: |
+          docker image prune -af --filter "until=24h"
+
