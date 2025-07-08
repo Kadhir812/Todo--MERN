@@ -168,14 +168,16 @@ jobs:
       - name: Stop and remove old containers if they exist
         shell: powershell
         run: |
-         $containers = @("todo-backend", "todo-frontend")
-         foreach ($container in $containers) {
-           if (docker ps -a --format "{{.Names}}" | Select-String -Pattern $container) {
-             docker stop $container
-             docker rm $container
-           } else {
-             Write-Host "Container $container does not exist, skipping."
-           }
+          $containers = @("todo-backend", "todo-frontend")
+          foreach ($container in $containers) {
+            $containerExists = docker ps -a --format "{{.Names}}" | Select-String -Pattern "^$container$"
+            if ($containerExists) {
+              Write-Host "Stopping and removing container: $container"
+              docker stop $container
+              docker rm $container
+            } else {
+              Write-Host "Container $container does not exist, skipping."
+            }
           }
 
       # # 3️⃣ Create custom Docker network if not exists
@@ -186,21 +188,23 @@ jobs:
 
       # 4️⃣ Start new backend container
       - name: Start backend
+        shell: powershell
         run: |
-          docker run -d --name todo-backend \
-            --network mern-network \
-            -p 5000:5000 \
-            -e NODE_ENV=production \
-            -e MONGODB_URI=mongodb://mongod:27017 \
+          docker run -d --name todo-backend `
+            --network mern-network `
+            -p 5000:5000 `
+            -e NODE_ENV=production `
+            -e MONGODB_URI=mongodb://mongod:27017 `
             ${{ env.REGISTRY }}/${{ env.OWNER }}/${{ env.BACKEND }}:${{ env.TAG }}
 
       # 5️⃣ Start new frontend container
       - name: Start frontend
+        shell: powershell
         run: |
-          docker run -d --name todo-frontend \
-            --network mern-network \
-            -p 3000:80 \
-            -e VITE_API_URL=http://todo-backend:5050 \
+          docker run -d --name todo-frontend `
+            --network mern-network `
+            -p 3000:80 `
+            -e VITE_API_URL=http://todo-backend:5000 `
             ${{ env.REGISTRY }}/${{ env.OWNER }}/${{ env.FRONTEND }}:${{ env.TAG }}
 
       # 6️⃣ Prune unused images (older than 24h)
