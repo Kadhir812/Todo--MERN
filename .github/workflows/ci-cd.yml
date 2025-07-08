@@ -132,7 +132,7 @@ jobs:
         with:
           context: ./${{ matrix.service == 'backend' && 'Backend' || 'Frontend' }}
           file: ./${{ matrix.service == 'backend' && 'Backend/Dockerfile' || 'Frontend/Dockerfile.prod' }}
-          push: ver >null
+          push: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/todo-${{ matrix.service }}:${{ env.TAG }}
             ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/todo-${{ matrix.service }}:latest
