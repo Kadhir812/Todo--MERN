@@ -7,10 +7,10 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 // //while building image use the below mongod line
-// const mongoUri = 'mongodb://mongod:27017'; 
+const mongoUri = 'mongodb://mongod:27017'; 
 
-//while running locally use the below localhost line
-const mongoUri = 'mongodb://localhost:27017'; 
+// //while running locally use the below localhost line
+// const mongoUri = 'mongodb://localhost:27017'; 
 const client = new MongoClient(mongoUri);
 let db;
 
