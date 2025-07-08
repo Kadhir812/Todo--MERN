@@ -168,10 +168,10 @@ jobs:
       - name: Stop old containers
         shell: cmd
         run: |
-          docker stop todo-backend  || true
-          docker stop todo-frontend || true
-          docker rm   todo-backend  || true
-          docker rm   todo-frontend || true
+          docker stop todo-backend  || ver >null
+          docker stop todo-frontend || ver >null
+          docker rm   todo-backend  || ver >null
+          docker rm   todo-frontend || ver >null
 
       # 3️⃣ Create custom Docker network if not exists
       - name: Create Docker network
@@ -194,7 +194,7 @@ jobs:
           docker run -d --name todo-frontend \
             --network mern-network \
             -p 3000:80 \
-            -e VITE_API_URL=http://todo-backend:5000 \
+            -e VITE_API_URL=http://todo-backend:5050 \
             ${{ env.REGISTRY }}/${{ env.OWNER }}/${{ env.FRONTEND }}:${{ env.TAG }}
 
       # 6️⃣ Prune unused images (older than 24h)
