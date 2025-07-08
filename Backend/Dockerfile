@@ -1,5 +1,5 @@
 # Use Node.js image
-FROM gcr.io/distroless/nodejs:20
+FROM nodejs:20
 
 # Set working directory
 WORKDIR /app
