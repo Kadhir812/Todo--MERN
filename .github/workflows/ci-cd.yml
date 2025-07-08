@@ -175,8 +175,9 @@ jobs:
 
       # 3️⃣ Create custom Docker network if not exists
       - name: Create Docker network
+        shell: powershell
         run: |
-          docker network inspect mern-network >/dev/null 2>&1 || docker network create mern-network
+          docker network inspect mern-network >/dev/null 2>&1 -or docker network create mern-network
 
       # 4️⃣ Start new backend container
       - name: Start backend
