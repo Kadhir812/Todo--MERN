@@ -166,28 +166,35 @@ jobs:
 
       # 3️⃣ Stop & remove old containers
       - name: Stop old containers
-        shell: bash
+        shell: cmd
         run: |
           docker stop todo-backend  || true
           docker stop todo-frontend || true
           docker rm   todo-backend  || true
           docker rm   todo-frontend || true
 
+      # 3️⃣ Create custom Docker network if not exists
+      - name: Create Docker network
+        run: |
+          docker network inspect mern-network >/dev/null 2>&1 || docker network create mern-network
+
       # 4️⃣ Start new backend container
       - name: Start backend
         run: |
           docker run -d --name todo-backend \
+            --network mern-network \
             -p 5000:5000 \
             -e NODE_ENV=production \
-            -e MONGODB_URI=mongodb://host.docker.internal:27017 \
+            -e MONGODB_URI=mongodb://mongod:27017 \
             ${{ env.REGISTRY }}/${{ env.OWNER }}/${{ env.BACKEND }}:${{ env.TAG }}
 
       # 5️⃣ Start new frontend container
       - name: Start frontend
         run: |
           docker run -d --name todo-frontend \
-            -p 80:80 \
-            -e VITE_API_URL=http://localhost:5000 \
+            --network mern-network \
+            -p 3000:80 \
+            -e VITE_API_URL=http://todo-backend:5000 \
             ${{ env.REGISTRY }}/${{ env.OWNER }}/${{ env.FRONTEND }}:${{ env.TAG }}
 
       # 6️⃣ Prune unused images (older than 24h)
